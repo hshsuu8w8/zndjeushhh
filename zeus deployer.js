@@ -20,15 +20,18 @@ export default {
 
                 const accRes = await fetch("https://api.cloudflare.com/client/v4/accounts", { headers });
                 const accData = await accRes.json();
+                
                 if (!accData.success || accData.result.length === 0) {
-                    throw new Error("خطا در یافتن اکانت. توکن نامعتبر است.");
+                    throw new Error("اکانتی یافت نشد. از صحت توکن مطمئن شوید.");
                 }
+                
                 const accountId = accData.result[0].id;
 
                 let devSub = null;
                 const subRes = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/subdomain`, { headers });
                 const subData = await subRes.json();
-                if (subData.success && subData.result.subdomain) {
+                
+                if (subData.success && subData.result && subData.result.subdomain) {
                     devSub = subData.result.subdomain;
                 } else {
                     const newSub = `zeus-${Math.random().toString(36).substring(2, 8)}`;
@@ -38,7 +41,11 @@ export default {
                         body: JSON.stringify({ subdomain: newSub })
                     });
                     const createSubData = await createSub.json();
-                    if (!createSubData.success) throw new Error("ساخت ساب‌دامین شکست خورد. قوانین کلودفلر را در اکانت خود تایید کنید.");
+                    
+                    if (!createSubData.success) {
+                        const cfError = createSubData.errors && createSubData.errors.length > 0 ? createSubData.errors[0].message : "نامشخص";
+                        throw new Error(`CF_TOS_ERROR|${cfError}`);
+                    }
                     devSub = newSub;
                 }
 
@@ -55,7 +62,7 @@ export default {
                 
                 if (!dbData.success) {
                     const cfError = dbData.errors && dbData.errors.length > 0 ? dbData.errors[0].message : "نامشخص";
-                    throw new Error(`ساخت دیتابیس شکست خورد: ${cfError}`);
+                    throw new Error(`CF_DB_ERROR|${cfError}`);
                 }
                 const dbUuid = dbData.result.uuid;
 
@@ -84,7 +91,7 @@ export default {
                 
                 if (!deployData.success) {
                     const cfError = deployData.errors && deployData.errors.length > 0 ? deployData.errors[0].message : "نامشخص";
-                    throw new Error(`کلودفلر اجازه آپلود نداد. دلیل: ${cfError}`);
+                    throw new Error(`CF_DEPLOY_ERROR|${cfError}`);
                 }
 
                 const routeRes = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${workerName}/subdomain`, {
@@ -115,7 +122,7 @@ export default {
 
 function getHtmlContent() {
     return `
-    <!DOCTYPE html>
+   <!DOCTYPE html>
     <html lang="fa" dir="rtl">
     <head>
         <meta charset="UTF-8">
@@ -151,19 +158,10 @@ function getHtmlContent() {
                 border-radius: 20px;
                 padding: 35px 25px;
                 width: 100%; 
-                max-width: 400px;
+                max-width: 370px;
                 box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
                 z-index: 10;
             }
-            .mac-controls {
-                display: flex;
-                gap: 8px;
-                margin-bottom: 20px;
-            }
-            .mac-btn { width: 12px; height: 12px; border-radius: 50%; }
-            .close { background: #ff5f56; }
-            .min { background: #ffbd2e; }
-            .max { background: #27c93f; }
             
             h2 { 
                 text-align: center; 
@@ -187,9 +185,9 @@ function getHtmlContent() {
                 background: #110090ff;
                 border: 1px solid #1a4073;
                 color: #ffffff;
-                border-radius: 10px;
+                border-radius: 200px;
                 text-decoration: none;
-                font-size: 14px;
+                font-size: 18px;
                 font-weight: bold;
                 transition: all 0.3s ease;
                 width: 100%;
@@ -203,7 +201,7 @@ function getHtmlContent() {
                 width: 100%;
                 padding: 15px;
                 margin-bottom: 20px;
-                border-radius: 10px;
+                border-radius: 220px;
                 border: 1px solid rgba(255, 255, 255, 0.1);
                 background: rgba(0, 0, 0, 0.4);
                 color: white;
@@ -225,10 +223,10 @@ function getHtmlContent() {
                 padding: 15px;
                 background: #00792dff;
                 border: none;
-                border-radius: 10px;
+                border-radius: 100px;
                 color: white;
                 font-weight: bold;
-                font-size: 15px;
+                font-size: 20px;
                 cursor: pointer;
                 transition: all 0.3s ease;
                 font-family: 'Vazir', sans-serif;
@@ -264,15 +262,15 @@ function getHtmlContent() {
                 width: 0%;
                 height: 100%;
                 background: #00792dff;
-                border-radius: 10px;
+                border-radius: 100px;
                 transition: width 0.4s ease;
             }
             #error-box {
                 padding: 12px;
                 background: rgba(255, 95, 86, 0.1);
-                border-right: 4px solid #ff5f56;
+                border: 4px solid #990800;
                 color: #ffe6e6;
-                border-radius: 8px;
+                border-radius: 800px;
                 font-size: 13px;
                 display: none;
                 text-align: center;
@@ -289,7 +287,7 @@ function getHtmlContent() {
                 text-align: center;
                 text-decoration: none;
                 font-weight: bold;
-                border-radius: 10px;
+                border-radius: 100px;
                 box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
                 font-size: 16px;
                 transition: all 0.3s ease;
@@ -301,7 +299,8 @@ function getHtmlContent() {
 
             .footer-container {
                 display: flex;
-                flex-direction: column;
+                flex-direction: row;
+                justify-content: center;
                 align-items: center;
                 gap: 12px;
                 margin-top: 35px;
@@ -320,7 +319,7 @@ function getHtmlContent() {
                 background: rgba(255, 255, 255, 0.03);
                 backdrop-filter: blur(10px);
                 padding: 10px 20px;
-                border-radius: 20px;
+                border-radius: 200px;
                 border: 1px solid rgba(255, 255, 255, 0.08);
                 transition: all 0.3s ease;
                 direction: ltr;
@@ -350,7 +349,7 @@ function getHtmlContent() {
                 background: rgba(255, 255, 255, 0.03);
                 backdrop-filter: blur(10px);
                 padding: 10px 20px;
-                border-radius: 20px;
+                border-radius: 200px;
                 border: 1px solid rgba(255, 255, 255, 0.08);
                 transition: all 0.3s ease;
                 direction: ltr;
@@ -372,27 +371,31 @@ function getHtmlContent() {
                 fill: #308658ff;
             }
 
-            @media (max-width: 480px) {
-                .glass-modal {
-                    padding: 25px 20px;
-                }
-                h2 {
-                    font-size: 19px;
-                }
-                .footer-container {
-                    margin-top: 25px;
-                }
+@media (max-width: 480px) {
+            .glass-modal {
+                padding: 25px 20px;
             }
+            h2 {
+                font-size: 19px;
+            }
+            .footer-container {
+                margin-top: 25px;
+                flex-wrap: wrap;
+            }
+            .github-footer, .telegram-footer {
+                padding: 8px 15px;
+                font-size: 13px;
+            }
+            .github-footer svg, .telegram-footer svg {
+                width: 18px;
+                height: 18px;
+            }
+        }
         </style>
     </head>
     <body>
         <div class="glass-modal" id="mainCard">
-            <div class="mac-controls">
-                <div class="mac-btn close"></div>
-                <div class="mac-btn min"></div>
-                <div class="mac-btn max"></div>
-            </div>
-            <h2> Zeus Panel Auto-Deployer ⚡️</h2>
+            <h2> Zeus Panel Auto Deployer ⚡️</h2>
             <p>  🔋 روزانه 10 الی 100 گیگ کانفیگ رایگان </p>
             
             <a href="https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=%5B%7B%22key%22%3A%22workers_scripts%22%2C%22type%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22workers_kv_storage%22%2C%22type%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22d1%22%2C%22type%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22account_settings%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22workers_subdomain%22%2C%22type%22%3A%22edit%22%7D%5D&accountId=*&zoneId=all&name=Zeus-Deployer-Token" target="_blank" class="btn-secondary" id="tokenBtn">
@@ -515,7 +518,26 @@ function getHtmlContent() {
                 } catch(e) {
                     statusContainer.style.display = 'none';
                     errorBox.style.display = 'block';
-                    errorBox.innerText = e.message;
+
+                    const errorMsg = e.message;
+                    
+                    if (errorMsg.includes("CF_TOS_ERROR") || errorMsg.includes("CF_DB_ERROR") || errorMsg.includes("CF_DEPLOY_ERROR")) {
+                        let userFriendlyMsg = "حساب کلودفلر شما خام است و نیاز به تایید دارد.";
+                        
+                        if (errorMsg.includes("email") || errorMsg.includes("verify")) {
+                            userFriendlyMsg = "ابتدا باید ایمیل خود را در داشبورد کلودفلر تایید کنید.";
+                        } else {
+                            userFriendlyMsg = "باید قوانین کلودفلر ورکرز را تایید کنید. لطفاً وارد داشبورد شوید.";
+                        }
+
+                        const rawError = errorMsg.split('|')[1] || errorMsg;
+
+                        errorBox.innerHTML = '<div style="margin-bottom: 8px;">' + userFriendlyMsg + '</div>' +
+                            '<div style="font-size: 11px; opacity: 0.7; margin-bottom: 12px; direction: ltr; word-wrap: break-word;">' + rawError + '</div>' +
+                            '<a href="https://dash.cloudflare.com/?to=/:account/workers/overview" target="_blank" style="display: inline-block; background: #ff5f56; color: white; padding: 8px 15px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 12px;">ورود به کلودفلر برای تایید</a>';
+                    } else {
+                        errorBox.innerText = errorMsg;
+                    }
                 } finally {
                     btn.disabled = false;
                     btn.innerText = 'ساخت پنل';
