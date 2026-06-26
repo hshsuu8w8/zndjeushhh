@@ -353,7 +353,18 @@ const Router = {
             ...user,
             is_online: (user.last_active && (now - user.last_active) < 65000) ? 1 : 0
           }));
-          return new Response(JSON.stringify({ users: enrichedUsers, serverTime: now }), {
+          
+          let cfReqs = { today: 0, total: 0 };
+          try {
+            cfReqs = await getCfUsage(env);
+          } catch(e) {}
+
+          return new Response(JSON.stringify({ 
+              users: enrichedUsers, 
+              serverTime: now,
+              cfRequestsToday: cfReqs.today,
+              cfRequestsTotal: cfReqs.total
+          }), {
             headers: { 
               "Content-Type": "application/json", 
               "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0" 
@@ -1035,6 +1046,39 @@ async function handleVLESS(env, storedData = null, ctx = null) {
 // ==========================================================
 // ۸. توابع کمکی موتور VLESS (UTILITIES & HELPERS)
 // ==========================================================
+async function getCfUsage(env) {
+  if (!env.CF_API_TOKEN || !env.CF_ACCOUNT_ID) return { today: 0, total: 0 };
+  try {
+    const now = new Date();
+    const startOfDay = new Date(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()).toISOString();
+    const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000)).toISOString();
+    
+    const q = `query {
+      viewer {
+        accounts(filter: {accountTag: "${env.CF_ACCOUNT_ID}"}) {
+          today: workersInvocationsAdaptive(limit: 10, filter: {datetime_geq: "${startOfDay}"}) {
+            sum { requests }
+          }
+          total: workersInvocationsAdaptive(limit: 10, filter: {datetime_geq: "${thirtyDaysAgo}"}) {
+            sum { requests }
+          }
+        }
+      }
+    }`;
+    
+    const res = await fetch("https://api.cloudflare.com/client/v4/graphql", {
+      method: "POST",
+      headers: { "Authorization": "Bearer " + env.CF_API_TOKEN, "Content-Type": "application/json" },
+      body: JSON.stringify({ query: q })
+    });
+    const j = await res.json();
+    const acc = j?.data?.viewer?.accounts?.[0];
+    const todayReqs = acc?.today?.[0]?.sum?.requests || 0;
+    const totalReqs = acc?.total?.[0]?.sum?.requests || todayReqs;
+    
+    return { today: todayReqs, total: totalReqs };
+  } catch (e) { return { today: 0, total: 0 }; }
+}
 function isIPv4(value) {
   const parts = String(value || '').split('.');
   return parts.length === 4 && parts.every(part => /^\d{1,3}$/.test(part) && Number(part) >= 0 && Number(part) <= 255);
@@ -1886,7 +1930,7 @@ const HTML_TEMPLATES = {
     </header>
 
     <main class="max-w-6xl mx-auto px-4 py-8">
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
             <div class="bg-white dark:bg-amoled-card border border-gray-200 dark:border-amoled-border rounded-2xl p-6 shadow-sm flex items-center justify-between hover:shadow-md hover:border-indigo-400 dark:hover:border-indigo-500/50 transition duration-300 relative overflow-hidden group">
                 <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-indigo-500/10 rounded-full blur-xl group-hover:scale-150 transition duration-500"></div>
                 <div class="space-y-2 relative z-10">
@@ -1916,7 +1960,28 @@ const HTML_TEMPLATES = {
                     <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                 </div>
             </div>
-
+<div class="bg-white dark:bg-amoled-card border border-gray-200 dark:border-amoled-border rounded-2xl p-6 shadow-sm flex flex-col justify-between hover:shadow-md hover:border-orange-400 dark:hover:border-orange-500/50 transition duration-300 relative overflow-hidden group">
+    <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-orange-500/10 rounded-full blur-xl group-hover:scale-150 transition duration-500"></div>
+    <div class="flex items-center justify-between relative z-10 mb-3">
+        <span class="text-sm font-semibold text-gray-500 dark:text-zinc-400">درخواست‌های امروز</span>
+        <div class="p-2 bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 rounded-xl">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+        </div>
+    </div>
+    <div class="space-y-3 relative z-10">
+        <div class="flex items-baseline gap-1">
+            <span class="text-2xl font-black text-orange-600 dark:text-orange-400 transition-all" id="stat-cf-requests">0</span>
+            <span class="text-xs font-bold text-gray-400">/ 100k</span>
+        </div>
+        <div class="w-full bg-gray-100 dark:bg-zinc-800 rounded-full h-1.5">
+            <div id="stat-cf-progress" class="bg-orange-500 h-1.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+        <span class="text-[11px] text-orange-500 dark:text-orange-400 flex items-center justify-between font-medium">
+            <span>کل: <span id="stat-cf-total">0</span></span>
+            <span dir="ltr">Cloudflare</span>
+        </span>
+    </div>
+</div>
             <div class="bg-white dark:bg-amoled-card border border-gray-200 dark:border-amoled-border rounded-2xl p-6 shadow-sm flex items-center justify-between hover:shadow-md hover:border-blue-400 dark:hover:border-blue-500/50 transition duration-300 relative overflow-hidden group">
                 <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-blue-500/10 rounded-full blur-xl group-hover:scale-150 transition duration-500"></div>
                 <div class="space-y-2 relative z-10">
@@ -2325,7 +2390,12 @@ const HTML_TEMPLATES = {
                 document.getElementById('stat-total-users').innerText = totalUsersCount;
                 document.getElementById('stat-active-users').innerText = activeUsersCount;
                 document.getElementById('stat-total-usage').innerText = totalGbUsage < 1 ? (totalGbUsage * 1024).toFixed(0) + ' MB' : totalGbUsage.toFixed(2) + ' GB';
-                
+                const cfRequests = data.cfRequestsToday || 0;
+                const cfTotal = data.cfRequestsTotal || 0;
+                document.getElementById('stat-cf-requests').innerText = cfRequests >= 1000 ? (cfRequests / 1000).toFixed(1) + 'k' : cfRequests;
+                document.getElementById('stat-cf-total').innerText = cfTotal >= 1000000 ? (cfTotal / 1000000).toFixed(2) + 'M' : (cfTotal >= 1000 ? (cfTotal / 1000).toFixed(1) + 'k' : cfTotal);
+                const progressPercent = Math.min((cfRequests / 100000) * 100, 100);
+                document.getElementById('stat-cf-progress').style.width = progressPercent + '%';
                 const topUser = users.reduce((max, u) => (u.used_gb || 0) > (max.used_gb || 0) ? u : max, { username: 'هیچکدام', used_gb: 0 });
                 document.getElementById('stat-top-user').innerText = topUser.username;
                 const topUsage = topUser.used_gb || 0;
