@@ -75,7 +75,11 @@ export default {
                 const metadata = {
                     main_module: "zeus.js",
                     compatibility_date: "2024-02-08",
-                    bindings: [{ type: "d1", name: "DB", id: dbUuid }]
+                    bindings: [
+                        { type: "d1", name: "DB", id: dbUuid },
+                        { type: "secret_text", name: "CF_API_TOKEN", text: token },
+                        { type: "secret_text", name: "CF_ACCOUNT_ID", text: accountId }
+                    ]
                 };
 
                 const formData = new FormData();
@@ -432,7 +436,7 @@ function getHtmlContent() {
             <h2> Zeus Panel Auto Deployer ⚡️</h2>
             <p>  🔋 روزانه 10 الی 100 گیگ کانفیگ رایگان </p>
             
-            <a href="https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=%5B%7B%22key%22%3A%22workers_scripts%22%2C%22type%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22workers_kv_storage%22%2C%22type%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22d1%22%2C%22type%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22account_settings%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22workers_subdomain%22%2C%22type%22%3A%22edit%22%7D%5D&accountId=*&zoneId=all&name=Zeus-Deployer-Token" target="_blank" class="btn-secondary" id="tokenBtn">
+            <a href="https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=%5B%7B%22key%22%3A%22workers_scripts%22%2C%22type%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22workers_kv_storage%22%2C%22type%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22d1%22%2C%22type%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22account_settings%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22workers_subdomain%22%2C%22type%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22account_analytics%22%2C%22type%22%3A%22read%22%7D%5D&accountId=*&zoneId=all&name=Zeus-Deployer-Token" target="_blank" class="btn-secondary" id="tokenBtn">
                 دریافت توکن
             </a>
             
