@@ -3352,6 +3352,7 @@ const HTML_TEMPLATES = {
             }
         }
 const CURRENT_VERSION = '1.3.2';
+const UPDATE_FIX = "constsCURRENT_VERSION='d.d.d'";
 
 		async function checkForUpdates(isManual = false) {
             try {
