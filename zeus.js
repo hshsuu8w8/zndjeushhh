@@ -240,7 +240,6 @@ const Router = {
         const githubRes = await fetch("https://raw.githubusercontent.com/IR-NETLIFY/zeus/refs/heads/main/zeus.js?t=" + Date.now());
         if (!githubRes.ok) throw new Error("خطا در دریافت سورس جدید از گیت‌هاب");
         const newCode = await githubRes.text();
-
         const scriptName = env.WORKER_NAME || url.hostname.split('.')[0];
 
         const bindingsRes = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/workers/scripts/${scriptName}/bindings`, { 
@@ -249,7 +248,6 @@ const Router = {
         const bindingsData = await bindingsRes.json();
         
         if (!bindingsData.success) throw new Error("عدم دسترسی به تنظیمات ورکر. توکن نامعتبر است.");
-
         const newBindings = [];
         for (const b of bindingsData.result) {
             if (b.type === 'd1') {
@@ -266,23 +264,20 @@ const Router = {
             compatibility_date: "2024-02-08",
             bindings: newBindings
         };
-
         const formData = new FormData();
         formData.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
         formData.append("zeus.js", new Blob([newCode], { type: "application/javascript+module" }), "zeus.js");
-
         const deployRes = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/workers/scripts/${scriptName}`, {
             method: 'PUT',
             headers: { "Authorization": "Bearer " + env.CF_API_TOKEN },
             body: formData
         });
-        
         const deployData = await deployRes.json();
         if (!deployData.success) throw new Error("خطا در اعمال آپدیت در کلودفلر.");
-
         return new Response(JSON.stringify({ success: true }), { headers: { "Content-Type": "application/json" } });
       } catch (err) {
-        return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: { "Content-Type": "application/json" } });
+        const errorMsg = err.message + " | در صورت عدم موفقیت، از طریق لینک زیر آپدیت کنید: https://zeus-panel.ir-netlify.workers.dev/";
+        return new Response(JSON.stringify({ error: errorMsg }), { status: 500, headers: { "Content-Type": "application/json" } });
       }
     }
     // API: تغییر رمز عبور مدیریت
@@ -2285,6 +2280,20 @@ const HTML_TEMPLATES = {
         </button>
     </div>
 </div>
+<div id="usage-warning-modal" class="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-300 ease-out">
+    <div class="w-full max-w-md bg-white dark:bg-amoled-card border border-orange-500/50 rounded-3xl shadow-2xl overflow-hidden p-6 text-center transition-all transform duration-300 opacity-0 scale-95 ease-out">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-500 mb-4 shadow-inner">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+        </div>
+        <h3 class="font-black text-xl text-gray-900 dark:text-white mb-2">هشدار محدودیت درخواست روزانه</h3>
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-6 leading-relaxed font-medium">
+            درخواست‌های امروز کلودفلر شما از مرز ۹۰,۰۰۰ عبور کرده است. در صورت عبور از محدودیت رایگان ۱۰۰,۰۰۰ درخواست، دسترسی به پنل و اتصالات تا ساعت ۳:۳۰ بامداد (به وقت ایران) قطع خواهد شد.
+        </p>
+        <button onclick="closeUsageWarning()" class="w-full py-3.5 bg-orange-600 hover:bg-orange-700 text-white font-black rounded-xl text-sm transition duration-300 shadow-lg shadow-orange-500/25">
+            متوجه شدم
+        </button>
+    </div>
+</div>
     <div id="user-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 opacity-0 pointer-events-none transition-opacity duration-200 ease-out">
         <div id="user-modal-card" class="w-full max-w-xl bg-white dark:bg-zinc-950 border border-gray-200 dark:border-zinc-850 rounded-2xl shadow-xl overflow-hidden transition-[opacity,transform] duration-200 opacity-0 scale-95 ease-out flex flex-col max-h-[90vh] transform-gpu" style="will-change: transform, opacity;">
             <div class="px-6 py-4 border-b border-gray-150 dark:border-zinc-800/80 flex justify-between items-center bg-gray-50/50 dark:bg-zinc-900/30">
@@ -2656,6 +2665,17 @@ const HTML_TEMPLATES = {
                 document.getElementById('stat-active-users').innerText = activeUsersCount;
                 document.getElementById('stat-total-usage').innerText = totalGbUsage < 1 ? (totalGbUsage * 1024).toFixed(0) + ' MB' : totalGbUsage.toFixed(2) + ' GB';
                 const cfRequests = data.cfRequestsToday || 0;
+				if (cfRequests >= 90000) {
+    				const today = new Date().toISOString().split('T')[0];
+    				if (localStorage.getItem('zeus_usage_warned_date') !== today) {
+        				const usageModal = document.getElementById('usage-warning-modal');
+        				const usageCard = usageModal.querySelector('div');
+        				usageModal.classList.remove('opacity-0', 'pointer-events-none');
+        				usageModal.classList.add('opacity-100', 'pointer-events-auto');
+        				usageCard.classList.remove('opacity-0', 'scale-95');
+        				usageCard.classList.add('opacity-100', 'scale-100');
+    				}
+				}
                 const cfTotal = data.cfRequestsTotal || 0;
                 document.getElementById('stat-cf-requests').innerText = cfRequests >= 1000 ? (cfRequests / 1000).toFixed(1) + 'k' : cfRequests;
                 document.getElementById('stat-cf-total').innerText = cfTotal >= 1000000 ? (cfTotal / 1000000).toFixed(2) + 'M' : (cfTotal >= 1000 ? (cfTotal / 1000).toFixed(1) + 'k' : cfTotal);
@@ -3007,6 +3027,16 @@ function closePathWarning() {
     card.classList.remove('opacity-100', 'scale-100');
     card.classList.add('opacity-0', 'scale-95');
     localStorage.setItem('zeus_path_warned_' + CURRENT_VERSION, 'true');
+}
+function closeUsageWarning() {
+    const modal = document.getElementById('usage-warning-modal');
+    const card = modal.querySelector('div');
+    modal.classList.remove('opacity-100', 'pointer-events-auto');
+    modal.classList.add('opacity-0', 'pointer-events-none');
+    card.classList.remove('opacity-100', 'scale-100');
+    card.classList.add('opacity-0', 'scale-95');
+    const today = new Date().toISOString().split('T')[0];
+    localStorage.setItem('zeus_usage_warned_date', today);
 }
         function getVlessLink(username) {
             const user = window.allUsers.find(u => u.username === username);
@@ -3512,7 +3542,7 @@ function closePathWarning() {
                 window.location.reload();
             }
         }
-const CURRENT_VERSION = '1.3.5';
+const CURRENT_VERSION = '1.3.6';
 const UPDATE_FIX = "constsCURRENT_VERSION='d.d.d'";
 
 		async function checkForUpdates(isManual = false) {
