@@ -1,23 +1,28 @@
-<div align="center">
+
+
   <img width="100%" alt="Zeus Panel Dark Mode" 
        src="https://raw.githubusercontent.com/IR-NETLIFY/zeus/refs/heads/main/photos/dark.png" 
        style="border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); margin-bottom: 15px;" />
        
+---
   <img width="100%" alt="Zeus Panel Dark Mode" 
        src="https://raw.githubusercontent.com/IR-NETLIFY/zeus/refs/heads/main/photos/status.png" 
        style="border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); margin-bottom: 15px;" />
-
+       
+---
   <img width="100%" alt="Zeus Panel Interface" 
        src="https://raw.githubusercontent.com/IR-NETLIFY/zeus/refs/heads/main/photos/deployer.png" 
        style="border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); margin-bottom: 15px;" />
-
+       
+---
   <img width="100%" alt="Zeus Panel Status" 
        src="https://raw.githubusercontent.com/IR-NETLIFY/zeus/refs/heads/main/photos/updater.png" 
        style="border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); margin-bottom: 15px;" />
-</div>
+       
+---
 
 <div align="center">
-  <h1>⚡️ پنل زئوس (Zeus Panel)</h1>
+  <h1>⚡️ پنل کلودفلر زئوس  ⚡️ </h1>
   <p><strong>سیستم پیشرفته مدیریت کانفیگ VLESS روی Cloudflare Workers + D1</strong></p>
 
   <br>
@@ -52,7 +57,7 @@
 
 ---
 
-## 🚀 راهنمای نصب تمام خودکار (Zero-Touch)
+## 🚀 راهنمای نصب  
 
 > [!IMPORTANT]  
 > **نصب آسان:** سیستم دیپلوی اختصاصی زئوس تمام مراحل از جمله ساخت دیتابیس، ساخت ورکر، اتصال متغیرها و فعال‌سازی لینک‌ها را در کسری از ثانیه **بدون نیاز به نوشتن حتی یک خط کد** برای شما انجام می‌دهد.
