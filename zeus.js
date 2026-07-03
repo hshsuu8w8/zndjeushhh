@@ -38,7 +38,7 @@ export default {
 		if (url.pathname.startsWith("/status/")) {
 			return await Router.handleUserStatus(url, env);
 		}
-		nse(HTML_TEMPLATES.nginx, {
+		return new Response(HTML_TEMPLATES.nginx, {
 			headers: { "Content-Type": "text/html; charset=utf-8" },
 		});
 	},
@@ -513,7 +513,7 @@ const Router = {
 							}
 						}
 						await env.DB.prepare("UPDATE users SET username = ?, limit_gb = ?, expiry_days = ?, limit_req = ?, ips = ?, tls = ?, port = ?, fingerprint = ?, max_connections = ?, ip_limit = ?, block_porn = ?, block_ads = ?, frag_len = ?, frag_int = ? WHERE username = ?")
-							.bind(new_username || username, limit_gb ? parseFloat(limit_gb) : null, expiry_days ? parseInt(expiry_days) : null, limit_req ? parseInt(limit_req) : null, ips || null, tls, port, fingerprint || "chrome", ip_limit ? parseInt(ip_limit) : null, ip_limit ? parseInt(ip_limit) : null, block_porn ? 1 : 0, block_ads ? 1 : 0, frag_len || "20-30", frag_int || "1-2", username)
+							.bind(new_username || username, limit_gb ? parseFloat(limit_gb) : null, expiry_days ? parseInt(expiry_days) : null, limit_req ? parseInt(limit_req) : null, ips || null, tls, port, fingerprint || "chrome", ip_limit ? parseInt(ip_limit) : null, ip_limit ? parseInt(ip_limit) : null, block_porn ? 1 : 0, block_ads ? 1 : 0, frag_len !== undefined ? frag_len : "20-30", frag_int !== undefined ? frag_int : "1-2", username)
 							.run();
 						return new Response(JSON.stringify({ success: true }), { headers: { "Content-Type": "application/json" } });
 					}
@@ -588,7 +588,7 @@ const Router = {
 					const finalIsActive = !isNaN(parsedIsActive) ? parsedIsActive : 1;
 					try {
 						await env.DB.prepare("INSERT INTO users (username, uuid, limit_gb, expiry_days, limit_req, ips, connection_type, tls, port, fingerprint, max_connections, ip_limit, used_gb, used_req, created_at, is_active, block_porn, block_ads, frag_len, frag_int) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-							.bind(username, finalUuid, limit_gb ? parseFloat(limit_gb) : null, expiry_days ? parseInt(expiry_days) : null, limit_req ? parseInt(limit_req) : null, ips || null, atob("dmxlc3M="), tls, port, fingerprint || "chrome", ip_limit ? parseInt(ip_limit) : null, ip_limit ? parseInt(ip_limit) : null, finalUsedGb, finalUsedReq, finalCreatedAt, finalIsActive, block_porn ? 1 : 0, block_ads ? 1 : 0, frag_len || "20-30", frag_int || "1-2")
+							.bind(username, finalUuid, limit_gb ? parseFloat(limit_gb) : null, expiry_days ? parseInt(expiry_days) : null, limit_req ? parseInt(limit_req) : null, ips || null, atob("dmxlc3M="), tls, port, fingerprint || "chrome", ip_limit ? parseInt(ip_limit) : null, ip_limit ? parseInt(ip_limit) : null, finalUsedGb, finalUsedReq, finalCreatedAt, finalIsActive, block_porn ? 1 : 0, block_ads ? 1 : 0, frag_len !== undefined ? frag_len : "20-30", frag_int !== undefined ? frag_int : "1-2")
 							.run();
 						return new Response(JSON.stringify({ success: true }), { headers: { "Content-Type": "application/json" } });
 					} catch (err) {
@@ -763,7 +763,7 @@ const SubscriptionService = {
 				const isTlsPort = ["443", "2053", "2083", "2087", "2096", "8443"].includes(portStr);
 				const tlsVal = isTlsPort ? "tls" : "none";
 				const userFrag = user.frag_len && user.frag_int ? "&fragment=" + user.frag_len + "," + user.frag_int : "";
-				const remark = user.username + " | " + ip + " | " + portStr;
+				const remark = user.username + " | \u200E" + ip + " | \u200E" + portStr;
 				links.push(atob("dmxlc3M6Ly8=") + user.uuid + "@" + ip + ":" + portStr + "?path=%2FIn_Panel_Rayeghan_Ast_Va_Gheyre_Ghabele_Foroosh&security=" + tlsVal + "&encryption=none&insecure=0&host=" + host + "&fp=" + fp + "&type=ws&allowInsecure=0&sni=" + host + userFrag + "#" + encodeURIComponent(remark));
 			});
 		});
@@ -2595,14 +2595,24 @@ const HTML_TEMPLATES = {
                         </div>
                     </div>
                 </div>
-<div class="grid grid-cols-2 gap-4 mt-4">
-    <div>
-        <label class="block text-[10px] sm:text-xs font-bold text-gray-500 dark:text-zinc-400 mb-2 uppercase tracking-wider">Fragment Length</label>
-        <input type="text" id="input-frag-len" placeholder="20-30" value="20-30" dir="ltr" class="w-full px-3 py-2.5 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm font-mono text-center text-gray-800 dark:text-zinc-100 transition">
+<div class="mt-4 pt-4 border-t border-gray-100 dark:border-zinc-900">
+    <div class="flex items-center justify-between mb-3">
+        <span class="text-xs font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider">تنظیمات فرگمنت (Fragment)</span>
+        <label class="relative inline-flex items-center cursor-pointer select-none">
+            <input type="checkbox" id="input-frag-toggle" onchange="toggleFragInputs(this.checked)" class="sr-only peer">
+            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-zinc-700 peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-500"></div>
+            <span class="mr-3 text-sm font-bold text-gray-700 dark:text-zinc-300">فعال‌سازی فرگمنت</span>
+        </label>
     </div>
-    <div>
-        <label class="block text-[10px] sm:text-xs font-bold text-gray-500 dark:text-zinc-400 mb-2 uppercase tracking-wider">Fragment Interval</label>
-        <input type="text" id="input-frag-int" placeholder="1-2" value="1-2" dir="ltr" class="w-full px-3 py-2.5 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm font-mono text-center text-gray-800 dark:text-zinc-100 transition">
+    <div id="frag-inputs-container" class="grid grid-cols-2 gap-4 hidden transition-all duration-300 mt-3">
+        <div>
+            <label class="block text-[10px] sm:text-xs font-bold text-gray-500 dark:text-zinc-400 mb-2 uppercase tracking-wider">Fragment Length</label>
+            <input type="text" id="input-frag-len" placeholder="20-30" value="20-30" dir="ltr" class="w-full px-3 py-2.5 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm font-mono text-center text-gray-800 dark:text-zinc-100 transition">
+        </div>
+        <div>
+            <label class="block text-[10px] sm:text-xs font-bold text-gray-500 dark:text-zinc-400 mb-2 uppercase tracking-wider">Fragment Interval</label>
+            <input type="text" id="input-frag-int" placeholder="1-2" value="1-2" dir="ltr" class="w-full px-3 py-2.5 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm font-mono text-center text-gray-800 dark:text-zinc-100 transition">
+        </div>
     </div>
 </div>
                 <div class="pt-2 border-t border-gray-100 dark:border-zinc-900">
@@ -2727,6 +2737,31 @@ const HTML_TEMPLATES = {
                         </select>
                         <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500 dark:text-zinc-400">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </div>
+                    </div>
+                </div>
+				<div class="pt-4 border-t border-gray-100 dark:border-zinc-800">
+                    <label class="block text-sm font-medium mb-1.5 text-gray-700 dark:text-zinc-300">آی‌پی اختصاصی سرور مجازی (Custom VPS Proxy IP)</label>
+                    <div class="relative">
+                        <input type="text" id="custom-proxy-input" placeholder="45.130.125.10:2053" dir="ltr" class="w-full px-3 py-2.5 bg-white dark:bg-amoled-input border border-gray-300 dark:border-amoled-border rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 dark:text-zinc-100 transition">
+                    </div>
+                    <p class="mt-1 text-[11px] text-gray-500 dark:text-zinc-400">حتماً آی‌پی یا دامنه را <strong class="text-orange-500">همراه با پورت</strong> وارد کنید .</p>
+                </div>
+                <div class="pt-4 border-t border-gray-100 dark:border-zinc-800">
+                    <label class="block text-sm font-medium mb-1.5 text-gray-700 dark:text-zinc-300">نرخ رفرش خودکار پنل</label>
+                    <div class="relative">
+                        <select id="refresh-rate-select" onchange="changeRefreshRate(this.value)" class="w-full pl-8 pr-3 py-2.5 bg-white dark:bg-amoled-input border border-gray-300 dark:border-amoled-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 dark:text-zinc-200 cursor-pointer appearance-none">
+                            <option value="1000">۱ ثانیه</option>
+                            <option value="2000" selected>۲ ثانیه (پیش‌فرض)</option>
+                            <option value="5000">۵ ثانیه</option>
+                            <option value="10000">۱۰ ثانیه</option>
+                            <option value="30000">۳۰ ثانیه</option>
+                            <option value="60000">۱ دقیقه</option>
+                            <option value="300000">۵ دقیقه</option>
+                            <option value="600000">۱۰ دقیقه</option>
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500 dark:text-zinc-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                         </div>
                     </div>
                 </div>
@@ -2925,19 +2960,29 @@ const HTML_TEMPLATES = {
                             <input type="number" id="bulk-input-ip-limit" min="0" placeholder="بدون تغییر" class="w-full px-3 py-2 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm font-semibold text-gray-800 dark:text-zinc-100 placeholder-gray-400/80 transition">
                         </div>
                     </div>
-					<div class="flex items-center gap-3 border border-gray-100 dark:border-zinc-900 p-3 rounded-xl bg-gray-50/20 dark:bg-zinc-900/10">
-						<label class="relative inline-flex items-center cursor-pointer select-none">
-							<input type="checkbox" id="bulk-apply-frag" class="sr-only peer">
-							<div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-						</label>
-						<div class="flex-1 grid grid-cols-2 gap-2">
+					<div class="flex flex-col gap-3 border border-gray-100 dark:border-zinc-900 p-3 rounded-xl bg-gray-50/20 dark:bg-zinc-900/10">
+						<div class="flex items-center justify-between">
+							<div class="flex items-center gap-3">
+								<label class="relative inline-flex items-center cursor-pointer select-none">
+									<input type="checkbox" id="bulk-apply-frag" onchange="toggleBulkFragContainer(this.checked)" class="sr-only peer">
+									<div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+								</label>
+								<span class="text-xs font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider">تنظیمات فرگمنت (Fragment)</span>
+							</div>
+							<label id="bulk-frag-toggle-wrapper" class="relative inline-flex items-center cursor-pointer select-none hidden">
+								<input type="checkbox" id="bulk-frag-enable-toggle" onchange="toggleBulkFragInputs(this.checked)" class="sr-only peer">
+								<div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-zinc-700 peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-500"></div>
+								<span class="mr-2 text-xs font-bold text-gray-700 dark:text-zinc-300">فعال‌سازی برای همه</span>
+							</label>
+						</div>
+						<div id="bulk-frag-inputs-container" class="grid grid-cols-2 gap-2 hidden transition-all duration-300 pt-2 border-t border-gray-100 dark:border-zinc-800">
 							<div>
 								<label class="block text-[10px] font-bold text-gray-500 dark:text-zinc-400 mb-1 uppercase tracking-wider">Fragment Length</label>
-								<input type="text" id="bulk-input-frag-len" placeholder="20-30" class="w-full px-2 py-1.5 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-xs font-mono text-center text-gray-800 dark:text-zinc-100 transition" dir="ltr">
+								<input type="text" id="bulk-input-frag-len" placeholder="20-30" value="20-30" class="w-full px-2 py-1.5 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-xs font-mono text-center text-gray-800 dark:text-zinc-100 transition" dir="ltr">
 							</div>
 							<div>
 								<label class="block text-[10px] font-bold text-gray-500 dark:text-zinc-400 mb-1 uppercase tracking-wider">Fragment Interval</label>
-								<input type="text" id="bulk-input-frag-int" placeholder="1-2" class="w-full px-2 py-1.5 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-xs font-mono text-center text-gray-800 dark:text-zinc-100 transition" dir="ltr">
+								<input type="text" id="bulk-input-frag-int" placeholder="1-2" value="1-2" class="w-full px-2 py-1.5 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-xs font-mono text-center text-gray-800 dark:text-zinc-100 transition" dir="ltr">
 							</div>
 						</div>
 					</div>
@@ -3223,6 +3268,34 @@ const HTML_TEMPLATES = {
                 }
             }
         }
+        window.toggleBulkFragContainer = function(show) {
+            const wrapper = document.getElementById('bulk-frag-toggle-wrapper');
+            const inputs = document.getElementById('bulk-frag-inputs-container');
+            const enableToggle = document.getElementById('bulk-frag-enable-toggle');
+            if (wrapper && inputs) {
+                if (show) {
+                    wrapper.classList.remove('hidden');
+                    if (enableToggle && enableToggle.checked) {
+                        inputs.classList.remove('hidden');
+                    }
+                } else {
+                    wrapper.classList.add('hidden');
+                    inputs.classList.add('hidden');
+                }
+            }
+        };
+
+        window.toggleBulkFragInputs = function(show) {
+            const inputs = document.getElementById('bulk-frag-inputs-container');
+            if (inputs) {
+                if (show) {
+                    inputs.classList.remove('hidden');
+                } else {
+                    inputs.classList.add('hidden');
+                }
+            }
+        };
+
         function toggleBulkEditModal(show) {
             const modal = document.getElementById('bulk-edit-modal');
             const card = document.getElementById('bulk-edit-modal-card');
@@ -3237,6 +3310,7 @@ const HTML_TEMPLATES = {
                 card.classList.remove('opacity-100', 'scale-100');
                 card.classList.add('opacity-0', 'scale-95');
                 document.getElementById('bulk-edit-form').reset();
+                window.toggleBulkFragContainer(false);
             }
         }
         function bulkEdit() {
@@ -3265,8 +3339,9 @@ const HTML_TEMPLATES = {
             const applyIps = document.getElementById('bulk-apply-ips').checked;
             const ipsValue = document.getElementById('bulk-input-ips').value;
 			const applyFrag = document.getElementById('bulk-apply-frag').checked;
-			const fragLenValue = document.getElementById('bulk-input-frag-len').value || '20-30';
-			const fragIntValue = document.getElementById('bulk-input-frag-int').value || '1-2';
+            const isBulkFragEnabled = document.getElementById('bulk-frag-enable-toggle').checked;
+			const fragLenValue = isBulkFragEnabled ? (document.getElementById('bulk-input-frag-len').value || '20-30') : "";
+			const fragIntValue = isBulkFragEnabled ? (document.getElementById('bulk-input-frag-int').value || '1-2') : "";
             if (!applyLimit && !applyExpiry && !applyReqLimit && !applyIpLimit && !applyFingerprint && !applyPorts && !applyIps && !applyFrag) {
                 alert('⚠️ لطفا حداقل یک فیلد را برای اعمال تغییر انتخاب کنید!');
                 submitButton.disabled = false;
@@ -3373,6 +3448,17 @@ const HTML_TEMPLATES = {
                 card.classList.add('opacity-0', 'scale-95');
             }
         }
+        window.toggleFragInputs = function(show) {
+            const container = document.getElementById('frag-inputs-container');
+            if (container) {
+                if (show) {
+                    container.classList.remove('hidden');
+                } else {
+                    container.classList.add('hidden');
+                }
+            }
+        };
+
         function toggleModal(show) {
             const modal = document.getElementById('user-modal');
             const card = document.getElementById('user-modal-card');
@@ -3406,6 +3492,9 @@ const HTML_TEMPLATES = {
 				if (fragLenInput) fragLenInput.value = '20-30';
 				const fragIntInput = document.getElementById('input-frag-int');
 				if (fragIntInput) fragIntInput.value = '1-2';
+                const fragToggle = document.getElementById('input-frag-toggle');
+                if (fragToggle) fragToggle.checked = false;
+                window.toggleFragInputs(false);
             }
         }
 		function toggleUpdateModal(show, version = '') {
@@ -3433,13 +3522,15 @@ const HTML_TEMPLATES = {
             document.getElementById('submit-btn').innerText = 'ایجاد کاربر';
             document.getElementById('input-name').disabled = false;
             document.getElementById('create-user-form').reset();
-            // اطمینان از اعمال پیش‌فرض‌ها در زمان باز شدن فرم جدید
             const cb443 = document.querySelector('input[name="ports"][value="443"]');
             if (cb443) cb443.checked = true;
             const cb80 = document.querySelector('input[name="ports"][value="80"]');
             if (cb80) cb80.checked = true;
             const fpSelect = document.getElementById('fingerprint-select');
             if (fpSelect) fpSelect.value = 'ios';
+            const fragToggle = document.getElementById('input-frag-toggle');
+            if (fragToggle) fragToggle.checked = false;
+            window.toggleFragInputs(false);
             toggleModal(true);
         }
         const themeToggleBtn = document.getElementById('theme-toggle');
@@ -3897,13 +3988,14 @@ const HTML_TEMPLATES = {
             const limit = document.getElementById('input-limit').value || null;
             const expiry = document.getElementById('input-expiry').value || null;
             const reqLimit = document.getElementById('input-req-limit').value || null;
-			const ipLimit = document.getElementById('input-ip-limit').value || null;
-			const checkedPorts = Array.from(document.querySelectorAll('input[name="ports"]:checked')).map(cb => cb.value);
-			const block_porn = document.getElementById('input-block-porn').checked;
-			const block_ads = document.getElementById('input-block-ads').checked;
-			const frag_len = document.getElementById('input-frag-len').value;
-			const frag_int = document.getElementById('input-frag-int').value;
-			if (checkedPorts.length === 0) {
+            const ipLimit = document.getElementById('input-ip-limit').value || null;
+            const checkedPorts = Array.from(document.querySelectorAll('input[name="ports"]:checked')).map(cb => cb.value);
+            const block_porn = document.getElementById('input-block-porn').checked ? 1 : 0;
+            const block_ads = document.getElementById('input-block-ads').checked ? 1 : 0;
+            const isFragEnabled = document.getElementById('input-frag-toggle').checked;
+            const frag_len = isFragEnabled ? (document.getElementById('input-frag-len').value || "20-30") : "";
+            const frag_int = isFragEnabled ? (document.getElementById('input-frag-int').value || "1-2") : "";
+            if (checkedPorts.length === 0) {
                 alert('⚠️ لطفا حداقل یک پورت را برای اتصال انتخاب کنید!');
                 submitButton.disabled = false;
                 submitButton.innerText = isEditMode ? 'ذخیره تغییرات' : 'ایجاد کاربر';
@@ -3919,7 +4011,7 @@ const HTML_TEMPLATES = {
                 const response = await fetch(url, {
                     method: method,
                     headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ username, limit_gb: limit, expiry_days: expiry, limit_req: reqLimit, tls, port, ips, fingerprint, ip_limit: ipLimit, block_porn: block_porn, block_ads: block_ads, frag_len: frag_len, frag_int: frag_int })
+                    body: JSON.stringify({ username, limit_gb: limit, expiry_days: expiry, limit_req: reqLimit, tls, port, ips, fingerprint, ip_limit: ipLimit, block_porn: block_porn, block_ads: block_ads, frag_len: frag_len, frag_int: frag_int })
                 });
                 if (response.ok) {
                     toggleModal(false);
@@ -3991,7 +4083,7 @@ function getVlessLink(username) {
                 ports.forEach((portStr) => {
                     const isTlsPort = tlsPorts.includes(portStr);
                     const tlsVal = isTlsPort ? 'tls' : 'none';
-                    const remark = user.username + ' | ' + ip + ' | ' + portStr;
+                    const remark = user.username + ' | \u200E' + ip + ' | \u200E' + portStr;
                     links.push('vle' + 'ss://' + (user.uuid || '') + '@' + ip + ':' + portStr + '?path=%2FIn_Panel_Rayeghan_Ast_Va_Gheyre_Ghabele_Foroosh&security=' + tlsVal + '&encryption=none&insecure=0&host=' + host + '&fp=' + fp + '&type=ws&allowInsecure=0&sni=' + host + userFrag + '#' + encodeURIComponent(remark));
                 });
             });
@@ -4063,10 +4155,6 @@ function getVlessLink(username) {
 function editUser(encodedUsername) {
     const username = decodeURIComponent(encodedUsername);
     const user = window.allUsers.find(u => u.username === username);
-	document.getElementById('input-block-porn').checked = user.block_porn === 1;
-	document.getElementById('input-block-ads').checked = (user.block_ads === 1);
-	document.getElementById('input-frag-len').value = user.frag_len || '20-30';
-	document.getElementById('input-frag-int').value = user.frag_int || '1-2';
     if (!user) {
         alert('کاربر یافت نشد!');
         return;
@@ -4075,6 +4163,7 @@ function editUser(encodedUsername) {
     editingUsername = username;
     document.getElementById('modal-title').innerText = 'ویرایش کاربر: ' + username;
     document.getElementById('submit-btn').innerText = 'ذخیره تغییرات';
+    
     const nameInput = document.getElementById('input-name');
     nameInput.value = username;
     nameInput.disabled = false;
@@ -4084,8 +4173,18 @@ function editUser(encodedUsername) {
     document.getElementById('input-ip-limit').value = user.ip_limit !== undefined ? (user.ip_limit || '') : (user.max_connections || '');
     document.getElementById('input-ips').value = user.ips || '';
     document.getElementById('fingerprint-select').value = user.fingerprint || 'chrome';
-	document.getElementById('input-block-porn').checked = (user.block_porn === 1);
-	document.getElementById('input-block-ads').checked = (user.block_ads === 1);
+    
+    document.getElementById('input-block-porn').checked = (user.block_porn === 1);
+    document.getElementById('input-block-ads').checked = (user.block_ads === 1);
+    
+    const hasFrag = Boolean(user.frag_len && user.frag_len !== "" && user.frag_int && user.frag_int !== "");
+    const fragToggle = document.getElementById('input-frag-toggle');
+    if (fragToggle) fragToggle.checked = hasFrag;
+    
+    document.getElementById('input-frag-len').value = hasFrag ? user.frag_len : '20-30';
+    document.getElementById('input-frag-int').value = hasFrag ? user.frag_int : '1-2';
+    window.toggleFragInputs(hasFrag);
+
     const userPorts = String(user.port || '').split(',').map(p => p.trim());
     document.querySelectorAll('input[name="ports"]').forEach(cb => {
         cb.checked = userPorts.includes(cb.value);
@@ -4152,6 +4251,14 @@ async function loadLocations() {
             const statusData = await statusRes.json();
             activeIata = statusData.iata || '';
             localStorage.setItem('cached_active_iata', activeIata);
+            const customInput = document.getElementById('custom-proxy-input');
+            if (customInput) {
+                if (!activeIata && statusData.proxy_ip && statusData.proxy_ip !== 'proxyip.cmliussss.net') {
+                    customInput.value = statusData.proxy_ip;
+                } else {
+                    customInput.value = '';
+                }
+            }
         }
         const res = await fetch('/locations');
         if (!res.ok) throw new Error();
@@ -4166,13 +4273,18 @@ async function loadLocations() {
 }
 async function saveSettings() {
     const select = document.getElementById('location-select');
-    const iata = select.value;
+    const customInput = document.getElementById('custom-proxy-input');
+    const customProxy = customInput ? customInput.value.trim() : '';
+    let iata = select.value;
     const btn = document.getElementById('save-settings-btn');
     btn.disabled = true;
     btn.innerText = 'در حال ذخیره...';
     try {
         let resolvedIp = 'proxyip.cmliussss.net';
-        if (iata) {
+        if (customProxy) {
+            resolvedIp = customProxy;
+            iata = '';
+        } else if (iata) {
             const domain = iata.toLowerCase() + '.proxyip.cmliussss.net';
             const dnsRes = await fetch('https://cloudflare-dns.com/dns-query?name=' + domain + '&type=A', {
                 headers: { 'accept': 'application/dns-json' }
@@ -4194,7 +4306,7 @@ async function saveSettings() {
             body: JSON.stringify({ proxy_ip: resolvedIp, iata: iata ? iata.toUpperCase() : '' })
         });
         if (response.ok) {
-            alert('✅ تنظیمات با موفقیت ذخیره شد.\\n' + (iata ? 'آی‌پی پروکسی کلودفلر: ' + resolvedIp : 'آدرس پروکسی به حالت پیش‌فرض بازگشت.'));
+            alert('✅ تنظیمات با موفقیت ذخیره شد.\\n' + (customProxy ? 'آی‌پی اختصاصی سرور: ' + resolvedIp : (iata ? 'آی‌پی پروکسی کلودفلر: ' + resolvedIp : 'آدرس پروکسی به حالت پیش‌فرض بازگشت.')));
             toggleSettingsModal(false);
         } else {
             alert('خطا در ذخیره تنظیمات');
@@ -4381,7 +4493,7 @@ async function saveSettings() {
                 window.location.reload();
             }
         }
-const CURRENT_VERSION = '1.5.12';
+const CURRENT_VERSION = '1.6.1';
 const UPDATE_FIX = "constsCURRENT_VERSION='d.d.d'";
 		async function checkForUpdates(isManual = false) {
             try {
@@ -4592,7 +4704,32 @@ document.addEventListener('DOMContentLoaded', () => {
             renderPortCheckboxes();
             loadUsers();
             loadLocations();
-            setInterval(() => loadUsers(true), 2000);
+            
+            window.usersRefreshIntervalId = null;
+            
+            window.startRefreshInterval = function(intervalMs) {
+                if (window.usersRefreshIntervalId) {
+                    clearInterval(window.usersRefreshIntervalId);
+                }
+                window.usersRefreshIntervalId = setInterval(() => loadUsers(true), intervalMs);
+            };
+
+            window.changeRefreshRate = function(val) {
+                const ms = parseInt(val, 10);
+                localStorage.setItem('zeus_refresh_rate', ms);
+                window.startRefreshInterval(ms);
+                showToast('نرخ رفرش پنل تغییر کرد');
+            };
+
+            const savedRate = localStorage.getItem('zeus_refresh_rate');
+            const initialRate = savedRate ? parseInt(savedRate, 10) : 2000;
+            const selectEl = document.getElementById('refresh-rate-select');
+            if (selectEl) {
+                selectEl.value = String(initialRate);
+            }
+            
+            window.startRefreshInterval(initialRate);
+
             setTimeout(() => checkForUpdates(false), 2000);
             setInterval(() => checkForUpdates(false), 60000);
         });
